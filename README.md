@@ -4,6 +4,8 @@ This extension provides the command *win* for the [todo.txt][todotxt] scritp.
 It is used to create the entries based on the events from the [when][when] 
 calendar.
 
+*Ruby required*
+
 ## Assumptions
 
 * You can mark a specific event in the calendar
