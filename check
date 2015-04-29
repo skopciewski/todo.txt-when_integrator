@@ -1,0 +1,234 @@
+#!/usr/bin/env ruby
+
+require 'date'
+
+class Integrator
+  def initialize(current_date, days_left_for_b_priority, calendar_events, todo_registry)
+    @current_date = current_date
+    @days_left_for_b_priority = days_left_for_b_priority
+    @calendar_events = calendar_events
+    @todo_registry = todo_registry
+  end
+
+  def run
+    import_entries
+    update_entries
+  end
+
+  def import_entries
+    @calendar_events.each do |event|
+      next unless event.to_handle?(@current_date)
+      crete_new_entry_if_not_exists(event)
+    end
+  end
+
+  def update_entries
+    entries = @todo_registry.get_tagged_entries(@current_date)
+    entries.each do |entry|
+      update_entry_priority_if_needed(entry)
+    end
+  end
+
+  private
+
+  def crete_new_entry_if_not_exists(event)
+    msg = event.to_s
+    unless @todo_registry.entry_exists?(msg)
+      days_left = event.days_left(@current_date)
+      priority = calculate_priory(days_left)
+      @todo_registry.insert_entry(priority, msg)
+    end
+  end
+
+  def update_entry_priority_if_needed(entry)
+    id = entry.id
+    old_priority = entry.priority
+    days_left = entry.days_left(@current_date)
+    new_priority = calculate_priory(days_left)
+    unless new_priority == old_priority
+      @todo_registry.update_priority_for_entry(new_priority, id)
+    end
+  end
+
+  def calculate_priory(days_left)
+    return 'C' if days_left > @days_left_for_b_priority
+    return 'B' if (1..@days_left_for_b_priority).include? days_left
+    'A'
+  end
+end
+
+class TodoRegistry
+  LINE_PATTERN = /^(?<id>\d+)\s+(\((?<pri>[A-Z])\)\s+)?(?<msg>.*)/
+  TAG_PATTERN = /<t:(?<date>[0-9-]+)>/
+
+  def initialize
+    @todo_cmd = ENV['TODO_FULL_SH']
+  end
+
+  def entry_exists?(msg)
+    result = `#{@todo_cmd} -p lsa "#{msg}"`.split("\n").first
+    ! (result == '--')
+  end
+
+  def insert_entry(priority, msg)
+    result = `#{@todo_cmd} command add "(#{priority}) #{msg}"`
+    result.split("\n").each { |l| p l.chomp }
+  end
+
+  def update_priority_for_entry(priority, id)
+    result = `#{@todo_cmd} command pri #{id} #{priority}`
+    result.split("\n").each { |l| p l.chomp }
+  end
+
+  def get_tagged_entries(current_date)
+    lines = `#{@todo_cmd} -p lsp "<t:"`.split("\n")
+    lines.inject([]) do |result, line|
+      LINE_PATTERN.match(line) do |lm|
+        msg = lm[:msg]
+        TAG_PATTERN.match(msg) do |tm|
+          id = lm[:id]
+          pri = lm[:pri]
+          event_date = current_date
+          deadline_date = Date.parse(tm[:date])
+          event = Event.new(event_date, deadline_date, msg)
+          result << Entry.new(id, pri, event)
+        end
+      end
+      result
+    end
+  end
+
+  class Entry
+    attr_reader :id, :priority, :event
+
+    def initialize(id, priority, event)
+      @id, @priority, @event = id, priority, event
+    end
+
+    def days_left(current_date)
+      event.days_left(current_date)
+    end
+  end
+end
+
+class Event
+  OUTDATED = -2
+  NOT_YET = -1
+
+  def initialize(event_date, deadline_date, msg)
+    @event_date, @deadline_date, @msg = event_date, deadline_date, clean(msg)
+  end
+
+  def to_handle?(current_date)
+    days = days_left(current_date)
+    ! [OUTDATED, NOT_YET].include?(days)
+  end
+
+  def days_left(current_date)
+    return NOT_YET if @event_date > current_date
+    return OUTDATED if @deadline_date < current_date
+    (@deadline_date - current_date).to_i
+  end
+
+  def to_s
+    "#{@msg} <t:#{@deadline_date.to_s}>"
+  end
+
+  private
+
+  def clean(msg)
+    msg.gsub(/\s?<t:.*>/, '')
+  end
+end
+
+class WhenCalendarParser
+  PATTERN = /^(?<dow>\w+)\s+(?<year>\d{4})\s+(?<month>\w+)\s+(?<day>\d{1,2})\s(?<msg>.*)/
+
+  def initialize(time_tag_parser)
+    @time_tag_parser = time_tag_parser
+  end
+
+  def extract_events(data)
+    lines = convert_data_to_lines(data)
+    lines.map { |line| build_event_from_line(line) }
+  end
+
+  private
+
+  def convert_data_to_lines(data)
+    data.split("\n")
+  end
+
+  def build_event_from_line(line)
+    event_or_nil = PATTERN.match(line) do |m|
+      msg = m[:msg]
+      event_date = Date.strptime("#{m[:year]} #{m[:month]} #{m[:day]}", '%Y %b %d')
+      @time_tag_parser.try_to_build_event(event_date, msg)
+    end
+    event_or_nil || @time_tag_parser.unparsed_event(line)
+  end
+end
+
+class TimeTagParser
+
+  def initialize(selected_parsers)
+    @parsers = selected_parsers.uniq
+  end
+
+  def try_to_build_event(event_date, msg)
+    @parsers.inject(nil) do |m, parser|
+      begin
+        break parser.parse(event_date, msg)
+      rescue ArgumentError
+        next
+      end
+    end
+  end
+
+  def unparsed_event(line)
+    Unknown.parse(line)
+  end
+
+  class Unknown
+    def self.parse(line)
+      Event.new(Date.new, Date.new, line)
+    end
+  end
+
+  class ForXDay
+    PATTERN = /<t:\+(?<days>\d+)>/
+
+    def self.parse(event_date, msg)
+      entry = PATTERN.match(msg) do |m|
+        deadline_date = event_date + m[:days].to_i
+        clean_msg = msg.gsub(/\s?<t:.*>/, '')
+        Event.new(event_date, deadline_date, clean_msg)
+      end
+      entry || raise(ArgumentError, 'Not match')
+    end
+  end
+
+end
+#-------------------------------------------------------------------------------
+# main
+#
+action = ARGV.shift
+
+if action == 'usage'
+  puts '  Generates entries based on "when" calendar:'
+  puts '    check "`when --noheader --language=EN w`"'
+  puts ''
+  exit 0
+end
+
+current_date = Date.today
+days_left_for_b_priority = 2
+time_tag_parser = TimeTagParser.new [
+  TimeTagParser::ForXDay,
+]
+calendar_parser = WhenCalendarParser.new(time_tag_parser)
+calendar_output = ARGV.shift
+calendar_events = calendar_parser.extract_events(calendar_output)
+todo_registry = TodoRegistry.new
+
+Integrator.new(current_date, days_left_for_b_priority, calendar_events, todo_registry).run
