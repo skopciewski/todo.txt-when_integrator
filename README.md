@@ -1,28 +1,28 @@
 # WhenIntegrator addon for the ToDo.txt
-  
-This extension provides the command *win* for the [todo.txt][todotxt] scritp.
-It is used to create the entries based on the events from the [when][when] 
+
+This extension provides the command _win_ for the [todo.txt][todotxt] scritp.
+It is used to create the entries based on the events from the [when][when]
 calendar.
 
-*Ruby required*
+_Ruby required_
 
 ## Assumptions
 
 * You can mark a specific event in the calendar
-  * the today event should be handled within x days (ex: "System update today 
+  * the today event should be handled in x days (ex: "System update today
     comes out - perform an update, do it in 3 days")
-  * TODO: the today event should be handled due specific date (ex: "System 
+  * TODO: the today event should be handled due specific date (ex: "System
     update today comes out - perform an update, do it due 2000-01-01")
   * TODO: the incoming event shpuld be handled earlier (ex: "Pay the bill since
     2000-01-01 - create the task about that 2 days earlier")
-* When the script runs, get the active events (`event_date` &lt; `current_date` 
-  &lt; `deadline_date`)
+* When the script runs, get the active events (cond: `event_date` &lt;
+  `current_date` &lt; `deadline_date`)
 * When the script runs, import the active events into the todo list (if not exists)
 * When the script runs, increase the status of the ending events
 
 ## Marking convention
 
-* `<t:+x>` 
+* `<t:+x>`
   * `event_date` = the date from the calendar
   * `deadline_date` = `event_date` + `x` days
 * TODO: `<t:2001-01-01>`
@@ -36,9 +36,9 @@ calendar.
 
 ## Installation
 
-Add-ons can be installed into the $HOME/.todo.actions.d directory, or any other 
-directory configured via $TODO_ACTIONS_DIR. 
-So, download *win* script, and copy it to that dir.
+Add-ons can be installed into the $HOME/.todo.actions.d directory, or any other
+directory configured via $TODO_ACTIONS_DIR.
+So, download _win_ script, and copy it to that dir.
 After installing the add-on, you must make it executable; for example:
 
 ```bash
@@ -47,7 +47,7 @@ chmod +x ~/.todo.actions.d/win
 
 ## Usage
 
-Edit when calendat:
+Edit when calendar:
 
 ```bash
 when e
