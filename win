@@ -233,7 +233,7 @@ end
 #
 action = ARGV.shift
 
-if action == 'usage'
+if action == 'usage' || ARGV.empty?
   puts '  Generates entries based on "when" calendar:'
   puts '    win "`when --noheader --language=EN w`"'
   puts ''
