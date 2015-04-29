@@ -1,10 +1,10 @@
 # WhenIntegrator addon for the ToDo.txt
 
-This extension provides the command _win_ for the [todo.txt][todotxt] scritp.
-It is used to create the entries based on the events from the [when][when]
+This extension provides the command **win** for the [todo.txt][todotxt] scritp.
+It is used to create the todo entries based on the events from the [when][when]
 calendar.
 
-_Ruby required_
+**Ruby required**
 
 ## Assumptions
 
@@ -38,7 +38,7 @@ _Ruby required_
 
 Add-ons can be installed into the $HOME/.todo.actions.d directory, or any other
 directory configured via $TODO_ACTIONS_DIR.
-So, download _win_ script, and copy it to that dir.
+So, download **win** script, and copy it to that dir.
 After installing the add-on, you must make it executable; for example:
 
 ```bash
