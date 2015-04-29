@@ -1,4 +1,22 @@
 #!/usr/bin/env ruby
+# encoding: utf-8
+
+# Copyright (C) 2015 Szymon Kopciewski
+#
+# This file is part of Todo.txt-WhenIntegrator
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 require 'date'
 
@@ -41,11 +59,11 @@ class Integrator
   end
 
   def update_entry_priority_if_needed(entry)
-    id = entry.id
     old_priority = entry.priority
     days_left = entry.days_left(@current_date)
     new_priority = calculate_priory(days_left)
     unless new_priority == old_priority
+      id = entry.id
       @todo_registry.update_priority_for_entry(new_priority, id)
     end
   end
@@ -99,7 +117,7 @@ class TodoRegistry
   end
 
   class Entry
-    attr_reader :id, :priority, :event
+    attr_reader :id, :priority
 
     def initialize(id, priority, event)
       @id, @priority, @event = id, priority, event
@@ -125,7 +143,7 @@ class Event
   end
 
   def days_left(current_date)
-    return NOT_YET if @event_date > current_date
+    return NOT_YET if current_date < @event_date
     return OUTDATED if @deadline_date < current_date
     (@deadline_date - current_date).to_i
   end
@@ -209,6 +227,7 @@ class TimeTagParser
   end
 
 end
+
 #-------------------------------------------------------------------------------
 # main
 #
@@ -216,7 +235,7 @@ action = ARGV.shift
 
 if action == 'usage'
   puts '  Generates entries based on "when" calendar:'
-  puts '    check "`when --noheader --language=EN w`"'
+  puts '    win "`when --noheader --language=EN w`"'
   puts ''
   exit 0
 end
