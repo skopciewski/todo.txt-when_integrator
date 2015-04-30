@@ -11,9 +11,9 @@ calendar.
 * You can mark a specific event in the calendar
   * the today event should be handled in x days (ex: "System update today
     comes out - perform an update, do it in 3 days")
-  * TODO: the today event should be handled due specific date (ex: "System
+  * The today event should be handled due specific date (ex: "System
     update today comes out - perform an update, do it due 2000-01-01")
-  * TODO: the incoming event shpuld be handled earlier (ex: "Pay the bill since
+  * The incoming event shpuld be handled earlier (ex: "Pay the bill since
     2000-01-01 - create the task about that 2 days earlier")
 * When the script runs, get the active events (cond: `event_date` &lt;
   `current_date` &lt; `deadline_date`)
@@ -25,12 +25,13 @@ calendar.
 * `<t:+x>`
   * `event_date` = the date from the calendar
   * `deadline_date` = `event_date` + `x` days
-* TODO: `<t:2001-01-01>`
+* `<t:2001-01-01>`
   * `event_date` = the date from the calendar
   * `deadline_date` = `2001-01-01`
-* TODO: `<t:>`
+  * or, conversely, if the input date is less than the event date
+* `<t:>`
   * `event_date` = `deadline_date` = the date from the calendar
-* TODO: `<t:-x>`
+* `<t:-x>`
   * `deadline_date` = the date from the calendar
   * `event_date` = `deadline_date` - `x` days
 
@@ -73,8 +74,16 @@ where:
 * "`when ...`" - command which lists the calendar events
   * `--noheader` - reduce the output
   * `--language=EN` - for parsing dates
-  * `--past=30` - we do not want miss events
+  * `--past=-30` - we do not want miss events
   * `m` - we want know about events in the future
+
+### Important
+
+Because we use `--past=-30` and `m` (`--future=30`), so:
+* `deadline_date` - `event_date` = approximately 60 days
+* we should not set triggers longer than 30 days (max: &lt;t:+30&gt;)
+
+... or if needed - increase the date range using `--past` and `--future` options
 
 ## Versioning
 

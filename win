@@ -124,7 +124,7 @@ class TodoRegistry
     end
 
     def days_left(current_date)
-      event.days_left(current_date)
+      @event.days_left(current_date)
     end
   end
 end
@@ -219,13 +219,52 @@ class TimeTagParser
     def self.parse(event_date, msg)
       entry = PATTERN.match(msg) do |m|
         deadline_date = event_date + m[:days].to_i
-        clean_msg = msg.gsub(/\s?<t:.*>/, '')
-        Event.new(event_date, deadline_date, clean_msg)
+        Event.new(event_date, deadline_date, msg)
       end
       entry || raise(ArgumentError, 'Not match')
     end
   end
 
+  class DueDate
+    PATTERN = /<t:(?<date>[1-9]\d{3}-\d{1,2}-\d{1,2})>/
+
+    def self.parse(event_date, msg)
+      entry = PATTERN.match(msg) do |m|
+        deadline_date = Date.parse(m[:date])
+        if event_date < deadline_date
+          Event.new(event_date, deadline_date, msg)
+        else
+          Event.new(deadline_date, event_date, msg)
+        end
+      end
+      entry || raise(ArgumentError, 'Not match')
+    end
+  end
+
+  class OnThisDay
+    PATTERN = /<t:>/
+
+    def self.parse(event_date, msg)
+      entry = PATTERN.match(msg) do |m|
+        deadline_date = event_date
+        Event.new(event_date, deadline_date, msg)
+      end
+      entry || raise(ArgumentError, 'Not match')
+    end
+  end
+
+  class XDaysEarlier
+    PATTERN = /<t:\-(?<days>\d+)>/
+
+    def self.parse(event_date, msg)
+      entry = PATTERN.match(msg) do |m|
+        deadline_date = event_date
+        event_date = deadline_date - m[:days].to_i
+        Event.new(event_date, deadline_date, msg)
+      end
+      entry || raise(ArgumentError, 'Not match')
+    end
+  end
 end
 
 #-------------------------------------------------------------------------------
@@ -244,6 +283,9 @@ current_date = Date.today
 days_left_for_b_priority = 2
 time_tag_parser = TimeTagParser.new [
   TimeTagParser::InXDays,
+  TimeTagParser::DueDate,
+  TimeTagParser::OnThisDay,
+  TimeTagParser::XDaysEarlier,
 ]
 calendar_parser = WhenCalendarParser.new(time_tag_parser)
 calendar_output = ARGV.shift
